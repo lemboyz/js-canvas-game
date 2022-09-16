@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <canvas></canvas>
+</body>
+<script>
+const canvas = document.querySelector("canvas")
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+const ctx = canvas.getContext("2d")
+
+class Character {
+    constructor(x, y, size) {
+        console.log(`x:${x} y:${y} size:${size}`)
+        this.x = x
+        this.y = y
+        this.size = size
+    }
+    #getRandomChar() {
+        const strings = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789アイウエオカキクケコサスセソタチツテナニヌノハヒフヘホマミムメモヤイユエヨラリルレロワイウエヲン"
+        const c = strings[Math.floor(Math.random() * strings.length)]
+        return c
+    }
+    draw() {
+        ctx.save()
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.font = `${this.size}px Verdana`
+        const text = this.#getRandomChar()
+        ctx.fillStyle = `hsl(${Math.random()*360}, 100%, 50%)`
+        ctx.fillText(text, this.x, this.y)
+        ctx.restore()
+    }
+    update() {
+        this.y += this.size
+        if (this.y > canvas.height && Math.random() < 0.8) {
+            this.y = 0
+        }
+    }
+}
+
+let size = 40
+let character_list = []
+for(let i=0; i<canvas.width/size; i++) {
+    const x = i*size
+    const y = 0
+    character_list.push(new Character(x,y,size))
+}
+
+let lastTime = 0
+let timer = 0
+function gameloop(timeStamp) {
+    timer += 1
+    let deltaTime = timeStamp - lastTime
+    lastTime = timeStamp
+    if (timer % 4 == 0) {
+        ctx.fillStyle = '#1e1e1e'  //createBackground()
+        ctx.globalAlpha = 0.2
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        character_list.forEach(c => {
+        c.draw()
+        c.update()
+    })    
+    }
+    
+    requestAnimationFrame(gameloop)
+}
+
+gameloop()
+
+</script>
+</html>

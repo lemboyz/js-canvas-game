@@ -1,0 +1,158 @@
+<html>
+<head>
+<title>canvas demo</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #333333;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+canvas {
+    width: 100vw;
+    height: 100vh;
+}
+</style>
+</head>
+<body>
+<canvas></canvas>
+</body>
+<script>
+let canvas = document.querySelector('canvas')
+canvas.width = innerWidth
+canvas.height = innerHeight
+let ctx = canvas.getContext('2d')
+let all_object_list = []
+let pause = false
+
+class Square {
+    constructor() {
+        this.x = Math.random() * canvas.width
+        this.y = Math.random() * canvas.height
+        this.size = canvas.width/100 * Math.random()
+        this.velocity = {
+            x: (Math.random() * 1 - 0.5)*this.size,
+            y: (Math.random() * 1 - 0.5)*this.size
+        }
+        this.color = `hsl(${Math.random()*360}, 100%, 50%)`
+    }
+    draw() {
+        const x = this.x-this.size/2
+        const y = this.y-this.size/2
+        ctx.fillStyle = 'navy'
+        ctx.fillRect(x-2, y+2, this.size, this.size)
+        ctx.fillStyle = this.color
+        ctx.fillRect(x, y, this.size, this.size)
+
+    }
+    update() {
+        this.x += this.velocity.x
+        this.y += this.velocity.y
+        if (this.x <= 0 || this.x >= canvas.width) {
+            this.velocity.x *= -1
+        }
+        if (this.y <= 0 || this.y >= canvas.height) {
+            this.velocity.y *= -1
+        }
+    }
+}
+
+class Ball {
+    constructor() {
+        this.x = Math.random() * canvas.width
+        this.y = Math.random() * canvas.height
+        this.r = Math.random() * canvas.width/100
+        this.velocity = {
+            x: (Math.random() * 1 - 0.5) * this.r / 10,
+            y: (Math.random() * 1 - 0.5) * this.r / 10
+        }
+        this.color = `hsl(${Math.random()*360}, 100%, 50%)`
+    }
+    draw() {
+        ctx.fillStyle = this.color
+        ctx.beginPath()
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+        ctx.fill()
+    }
+    update(deltaTime) {
+        this.x += this.velocity.x * deltaTime
+        this.y += this.velocity.y * deltaTime
+        if (this.x-this.r <= 0 || this.x+this.r >= canvas.width) {
+            this.velocity.x *= -1
+        }
+        if (this.y-this.r <= 0 || this.y+this.r >= canvas.height) {
+            this.velocity.y *= -1
+        }
+    }
+    collide(otherBall) {
+        return
+        if (this.isTouched(otherBall)) {
+            this.velocity.x -= otherBall.velocity.x
+            this.velocity.y -= otherBall.velocity.y
+        }
+    }
+    isTouched(otherBall) {
+        let dx = this.x - otherBall.x
+        let dy = this.y - otherBall.y
+        let distance = Math.sqrt(dx*dx + dy*dy)
+        if (distance <= this.r+otherBall.r) {
+            console.log(`isTouched() true`)
+            return true
+        }
+        console.log(`isTouched() false`)
+        return false
+    }
+}
+
+
+
+function allBallsCollide() {
+    for (let i=0; i<all_object_list.length; i++) {
+        let ball = all_object_list[i]
+        for (let j=0; j<all_object_list.length; j++) {
+            let otherBall = all_object_list[j]
+            if (i!=j) {
+                ball.collide(otherBall)
+            }
+        }
+    }
+}
+
+window.addEventListener('keyup', function(ev) {
+    if (ev.key == ' ') {
+        console.log('spacebar is pressed')
+        pause = !pause
+    }
+})
+window.addEventListener('resize', function(ev) {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+})
+
+let lastTime = 0
+function animate(timeStamp) {
+if (!pause) {
+    let deltaTime = timeStamp - lastTime
+    console.log(deltaTime)
+    lastTime = timeStamp
+
+    ctx.clearRect(0,0,canvas.width,canvas.height)
+    if (Math.random() < 0.1 && all_object_list.length<20) {
+        //all_object_list.push(new Square())
+        all_object_list.push(new Ball())
+    }
+
+    all_object_list.forEach(obj => {
+        obj.draw()
+        obj.update(deltaTime)
+    })
+    allBallsCollide()
+
+}
+requestAnimationFrame(animate)
+}
+animate()
+</script>
+</html>

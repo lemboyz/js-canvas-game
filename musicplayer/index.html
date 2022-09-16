@@ -1,0 +1,39 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" type="image/x-icon" href=""/>
+<title>Music Player</title>
+<script src='id3-minimized.js'></script>
+<script src='utils.js'></script>
+<script src='SoundVisualizer.js'></script>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+}
+body {
+    overflow: hidden;
+}
+#picture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 999;
+}
+</style>
+</head>
+<body>
+<canvas id='canvas1'></canvas>
+<canvas id='picture'></canvas>
+<!--
+<img id='picture' src='' alt='picture extracted from ID3'/>
+-->
+</body>
+<script src="script.js"></script>
+<script>
+document.querySelector('#picture').onclick = function() {
+    console.log('picture onclick')
+    this.style.display = this.style.display == 'none' ? 'block' : 'none'
+}
+</script>
+</html>

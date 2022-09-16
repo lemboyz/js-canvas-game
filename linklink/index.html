@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="shortcut icon" href="">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连连看</title>
+    <script src="SoundVisualizer.js"></script>
+    <script src="LevelSelection.js"></script>
+    <script src="utils.js"></script>
+    <script src="MouseEffect.js"></script>
+    <script src="LinkFlare.js"></script>
+    <script src="BoundingBox.js"></script>
+    <script src="Block.js"></script>
+    <script src="TimeProcess.js"></script>
+    <script src="ScoreBoard.js"></script>
+    <script src="StageProperty.js"></script>
+    <style>
+        * {
+            width: 100vw;
+            height: 100vh;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        /* body {
+            background-image: url(background/1.jpg) ;
+            background-size: 100% 100%;
+        } */
+        canvas {
+            width: 100%;
+            height: 100%;
+            background-color: navy;
+        }
+        canvas:hover {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas></canvas>
+</body>
+<script>
+const canvas = document.querySelector('canvas')
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+const ctx = canvas.getContext('2d')
+
+let soundVisualizer = null
+let intervalHandler = null
+let levelSelection = new LevelSelection()
+let boundingBox = null // createBoundingBox()
+let blocks = [] // createBlocks(chooseRandomEmoji())
+let currentBlockValue = null
+let bgmAudio = null
+let bgmFile = null
+let bgmMuted = false
+let isGameOver = false
+let playing = false
+let timeProcess = null // createTimeProcess()
+let startTime = null
+let bomb = null // new Bomb(80*12, 80, 80)
+let shuffle = null // new Shuffle(80*12, 80*2, 80)
+let bgmSwitch = null // new BgmSwitch(80*12, 80*3, 80)
+let scoreBoard = null // new ScoreBoard()
+let linkFlares = []
+let selected_blocks_idx = []
+const mouse = {x: null, y: null}
+
+function initGameData(emoji_array, bgmfile) {
+    boundingBox = createBoundingBox()
+    blocks = emoji_array || createBlocks(chooseRandomEmoji())
+    currentBlockValue = null
+    bgmAudio = null
+    bgmFile = bgmfile
+    bgmMuted = false
+    isGameOver = false
+    playing = false
+    timeProcess = createTimeProcess()
+    startTime = null
+    bomb = new Bomb(80*12, 80, 80)
+    shuffle = new Shuffle(80*12, 80*2, 80)
+    bgmSwitch = new BgmSwitch(80*12, 80*3, 80)
+    scoreBoard = new ScoreBoard()
+    linkFlares = []
+    selected_blocks_idx = []
+}
+// initGameData(createBlocks(chooseRandomEmoji()), bgmFile)
+
+window.onresize = function() {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+}
+
+document.addEventListener('mousemove', function(event) {
+    mouse.x = event.x
+    mouse.y = event.y
+})
+document.addEventListener('mousedown', function(event) {
+    let x = event.x
+    let y = event.y
+    mouse.x = x
+    mouse.y = y
+})
+document.onmousedown = function(event) {
+    let x = event.x
+    let y = event.y
+    mouse.x = x
+    mouse.y = y
+    if (bomb && bomb.isMouseHover()) {
+        currentBlockValue = bomb.onclick()
+    }
+    if (shuffle && shuffle.isMouseHover()) {
+        shuffle.onclick()
+    }
+    if (bgmSwitch && bgmSwitch.isMouseHover()) {
+        bgmSwitch.onclick()
+    }
+    levelSelection.levelBlocks.forEach(b => {
+        if (b.isUnderMouse()) {
+            b.onclick()
+        }
+    })
+}
+
+document.onmouseup = function() {
+    if(isGameOver) {return}
+    if(startTime == null) {
+        startTime = (new Date()).getTime()
+        playBgm(bgmFile)
+        soundVisualizer = new SoundVisualizer(0, canvas.height, canvas.width, canvas.height, bgmAudio)
+    }
+    if(!blocks) {return}
+    for(let i=0; i<blocks.length; i++) {
+        let block = blocks[i]
+
+        if (block.isUnderMouse(mouse)) {
+            block.onselect()
+            currentBlockValue = block.value
+            setEmojiFavicon(block.value)
+            if(block.isSelected() && (selected_blocks_idx.indexOf(i)==-1)) {
+                selected_blocks_idx.push(i)
+            }
+
+            switch(selected_blocks_idx.length) {
+                case 2:
+                    let n1 = selected_blocks_idx[0]
+                    let n2 = selected_blocks_idx[1]
+
+                    if(blocks[n1].value == blocks[n2].value && getLinkedEndpoints(blocks[n1],blocks[n2])) {
+                        let endpoints = getLinkedEndpoints(blocks[n1], blocks[n2])
+                        for (let x=0; x<endpoints.length-1; x++) {
+                            let ep1 = endpoints[x]
+                            let ep2 = endpoints[x+1]
+                            linkFlares.push(new LinkFlare(ep1, ep2))
+                        }
+
+                        blocks[n1].vanish()
+                        blocks[n2].vanish()
+                        playSound('sounds/removed.mp3')
+                        selected_blocks_idx = []
+                    }else{
+                        blocks[n1].onselect()
+                        selected_blocks_idx = [n2]
+                    }
+                    break
+            }
+        }
+    }
+    mouse.x = null
+    mouse.y = null
+}
+
+function setTextStyle(font, textBaseline, textAlign, color) {
+    ctx.font = font || '50px Georgia'
+    ctx.textBaseline = textBaseline || 'middle'
+    ctx.textAlign = textAlign || 'center'
+    ctx.fillStyle = color || 'white'
+}
+
+function gameover() {
+    ctx.save()
+    const w = 80 * 4
+    const h = 80 * 2
+    ctx.fillStyle = "lightyellow"
+    ctx.fillRect(canvas.width/2 - w/2, canvas.height/2 - h/2, w, h)
+    ctx.fill()
+
+    setTextStyle('50px Georgia', 'middle', 'center', 'red')
+    ctx.fillText("You Lose", canvas.width/2, canvas.height/2)
+    playSound('sounds/gameover.mp3')
+    pauseBgm()
+    ctx.restore()
+}
+
+function success() {
+    ctx.save()
+    ctx.beginPath()
+    const w = 80 * 4
+    const h = 80 * 2
+    ctx.fillStyle = "lightyellow"
+    ctx.fillRect(canvas.width/2 - w/2, canvas.height/2 - h/2, w, h)
+    ctx.fill()
+
+    setTextStyle('50px Georgia', 'middle', 'center', 'black')
+    ctx.fillText("You Win", canvas.width/2, canvas.height/2-40)
+    playSound('sounds/success.mp3')
+    pauseBgm()
+
+    let endTime = (new Date()).getTime()
+    let playingSeconds = endTime - startTime
+    playingSeconds = Math.floor(playingSeconds/1000.0)
+    ctx.fillText(`Seconds: ${playingSeconds}`, canvas.width/2, canvas.height/2+40)
+    ctx.restore()
+
+    scoreBoard.addNewRecord(currentBlockValue, playingSeconds)
+    levelSelection.saveMaxPassedLevel()
+}
+
+function isSuccess() {
+    for(let i=0; i<blocks.length; i++) {
+        if(blocks[i].isValid()) {
+            return false
+        }
+    }
+    return true
+}
+
+function playBgm(bgmfile) {
+    if(playing == false) {
+        
+        if (bgmfile) {
+            bgmAudio = new Audio(bgmfile)
+        }else{
+            let arr = []
+            for (let i=0; i<=28; i++) {
+                arr.push(i+'')
+            }
+            let n = getRandomFromArray(arr)
+            bgmAudio = new Audio(`sounds/bgm/${n}_small.mp3`)
+        }
+        bgmAudio.volume = 0.5
+        bgmAudio.loop = true
+        bgmAudio.play()
+    }
+    playing = true
+}
+function pauseBgm() {
+    if (bgmAudio) {
+        bgmAudio.volume = 0
+    }
+}
+function restoreBgm() {
+    if (bgmAudio) {
+        bgmAudio.volume = 0.5
+    }
+}
+function switchBgm() {
+    if (bgmAudio && bgmAudio.volume == 0) {
+        bgmAudio.volume = 0.5
+    }else if (bgmAudio){
+        bgmAudio.volume = 0
+    }
+}
+
+function gameloop() {
+    ctx.clearRect(0,0,canvas.width,canvas.height)
+
+    if (levelSelection.visible) {
+        levelSelection.draw()
+        levelSelection.update()
+        return // exit gameloop
+    }
+
+    if (soundVisualizer) {
+        soundVisualizer.draw()
+        soundVisualizer.update()
+    }
+
+    timeProcess.draw()
+    timeProcess.update()
+
+    boundingBox.draw()
+    boundingBox.update()
+    blocks.forEach(block => {
+        block.draw()
+        block.update()
+    });
+
+    linkFlares.forEach(obj => {
+        obj.draw()
+        obj.update()
+    })
+    linkFlares = linkFlares.filter(
+        function(obj) {
+            return obj.isValid()
+        }
+    )
+
+    bomb.draw()
+    bomb.update()
+    shuffle.draw()
+    shuffle.update()
+    bgmSwitch.draw()
+    bgmSwitch.update()
+
+    scoreBoard.draw()
+    scoreBoard.update()
+
+    // mouseEffect.draw()
+    // mouseEffect.update()
+
+    if(isSuccess()) {
+        success()
+        clearInterval(intervalHandler)
+        isGameOver = true
+    }
+
+    if(timeProcess.isTimeOver()) {
+        gameover()
+        clearInterval(intervalHandler)
+        isGameOver = true
+    }
+}
+intervalHandler = setInterval(gameloop, 1000/60)
+
+</script>
+</html>

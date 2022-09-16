@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Star wars</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    background: navy;
+    color: coral;
+    //filter: grayscale(100%);
+}
+canvas {
+width: 100vw;
+height: 100vh;
+line-height: 100vh;
+text-align: center;
+font-size: 15em;
+}
+#beian {
+    position: absolute;
+    top: calc(100vh - 20px);
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.8em;
+    line-height: 20px;
+    height: 20px;
+    width: 220px;
+    display: block;
+    background-color: #19196f;
+    box-shadow: 2px 2px 3px #aaaaaa;
+    border-radius: 4px;
+    text-align: center;
+}
+a:link,a:visited,a:hover,a:active {
+    color: white;
+    background-color: #19196f;
+    text-decoration: none; 
+}
+</style>
+</head>
+<body>
+<canvas id="canvas1">Star wars</canvas>
+<a id="beian" href="https://beian.miit.gov.cn/" target="_blank">粤ICP备2021143018号</a>
+</body>
+<script src="utils.js"></script>
+<script src="script.js"></script>
+<script>
+let btn = document.createElement("input")
+btn.type = "button"
+btn.value = "speech"
+btn.style.position = "absolute"
+btn.style.left = "0"
+btn.style.top = "0"
+btn.style.zIndex = 1000000
+btn.addEventListener("click", function() {
+    console.log("speech")
+    let msg = new SpeechSynthesisUtterance("how are you")
+    window.speechSynthesis.speak(msg)
+})
+document.body.appendChild(btn)
+
+setTimeout(function(){
+    const beian = document.querySelector("#beian")
+    beian.style.display = "none"
+},5000)
+</script>
+</html>
